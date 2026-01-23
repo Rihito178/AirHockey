@@ -1,6 +1,7 @@
 #include"DxLib.h"
 #include<math.h>
 #include<stdlib.h>
+
 //ボールの跳ね返りの計算(クリア) 
 //ボールを自動で動かす(クリア)
 //キーでラケットを動かす(クリア) 
@@ -25,6 +26,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	SetDrawScreen(DX_SCREEN_BACK);//描画面を裏に
 	//int timer = 0;//経過時間
 
+
 	int imgbg = LoadGraph("image/bg.png");//背景画像読み込み
 	int bgm = LoadSoundMem("sound/bgm.mp3");//サウンド・音量設定
 	int jin = LoadSoundMem("sound/gameover.mp3");
@@ -40,11 +42,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	int ballVy = 5;//Yの速さ
 	int ballR = 50;//ボールのサイズ
 
-	//ラケットの座標管理
+	//1Pラケットの座標管理
 	int racketX = WIDTH / 2;//ラケットの中心(X)
 	int racketY = HEIGHT - 50;//ラケットの中心(Y)
 	int racketW = 120;//ラケットの幅
 	int racketH = 12;//ラケットの高さ
+
+	//2Pラケットの座標管理
+	int topRacketX = WIDTH / 2;
+	int topRacketY = 50;       // 画面上から50px
+	int topRacketW = 120;
+	int topRacketH = 12;
+
 
 	//スコアの入力式
 	//int score = 0;
@@ -58,6 +67,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	int highScore = 1000;//ハイスコア入力
 	int dx, dy;//ヒットチェックの文
 
+	int Center = 2;//画面中央の計算
+	int TexT_Y = 3;//メイン文字の表示位置固定(Title等)
+
+
+
+
+
 
 	while (1)//{}内を繰り返し行う
 	{
@@ -68,13 +84,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		{
 		case TITLE://タイトル
 			SetFontSize(50);
-			DrawString(WIDTH / 2 - 50 / 2 * 12 / 2, HEIGHT / 3, "Tennis Game", 0x00ff00);
+			DrawString(WIDTH / Center - 50 / Center * 12 / Center, HEIGHT / TexT_Y, "Tennis Game", 0x00ff00);
+			
 			if (timer % 60 < 30)
 			{
 				SetFontSize(30);
-				DrawString(WIDTH / 2 - 30 / 2 * 21 / 2, HEIGHT * 2 / 3, "Press SPACE to start.", 0x00ffff);
+				DrawString(WIDTH / Center - 30 / Center * 21 / Center, HEIGHT * Center / TexT_Y, "Press SPACE to start.", 0x00ffff);
 			}
-			if (CheckHitKey(KEY_INPUT_SPACE) == 1)//スペースキーを押したとき開始する
+			
+			if (CheckHitKey(KEY_INPUT_SPACE))//スペースキーを押したとき開始する
 			{
 				ballX = 40;
 				ballY = 80;
@@ -93,10 +111,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			//int bollの跳ね返りの計算
 			ballX = ballX + ballVx;//ボールの中心（Ｘ）＝ボールの中心（Ｘ）＋Ｘの速さ
 			if (ballX < ballR && ballVx < 0)ballVx = -ballVx;//ボールのX座標＜ボールの半径になる上X座標の速さ＜０の場合
+			
 			if (ballX > WIDTH - ballR && ballVx > 0)ballVx = -ballVx;//ボールのX座標＞横幅になる上X座標の速さ＞０の場合
+
+
 
 			ballY = ballY + ballVy;//ボールの中心（Ｙ）＝ボールの中心（Ｙ）＋Ｙの速さ
 			if (ballY < ballR && ballVy < 0)ballVy = -ballVy;//ボールのY座標＜ボールの半径になる上Y座標の速さ＜０の場合
+			
 			//if (ballY > HEIGHT && ballVy > 0)ballVy = -ballVy;//ボールのY座標＜ボールの高さになる上Y座標の速さ＜０の場合
 
 			if (ballY > HEIGHT)//ボールが下の端に到達したとき終了する
@@ -107,22 +129,54 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			}
 			DrawCircle(ballX, ballY, ballR, GetColor(138, 43, 226), TRUE);//ボールの色（座標にballのX・Y・R座標を入力する）
 
+
+
 			//ラケット
 
-			if (CheckHitKey(KEY_INPUT_LEFT) == 1)//左キー
+			if (CheckHitKey(KEY_INPUT_LEFT))//1P左キー
 			{
 				racketX = racketX - 10;
 				if (racketX < racketW / 2)racketX = racketW / 2;
 			}
 
-			if (CheckHitKey(KEY_INPUT_RIGHT) == 1)//右キー
+			if (CheckHitKey(KEY_INPUT_RIGHT))//1P右キー
 			{
 				racketX = racketX + 10;
 				if (racketX > WIDTH - racketW / 2)racketX = WIDTH - racketW / 2;
 			}
 
-			DrawBox(racketX - racketW / 2, racketY - racketH / 2, racketX + racketW / 2, racketY + racketH / 2, 0x0080ff, TRUE);
-			//(説明文付け足し忘れずに)//////////////////////////
+
+
+
+
+			if (CheckHitKey(KEY_INPUT_LEFT))//2P左キー
+			{
+				topRacketX = topRacketX - 10;
+				if (topRacketX < topRacketW / 2)topRacketX = topRacketW / 2;
+			}
+
+			if (CheckHitKey(KEY_INPUT_RIGHT))//2P右キー
+			{
+				topRacketX = topRacketX + 10;
+				if (topRacketX > WIDTH - topRacketW / 2)topRacketX = WIDTH - topRacketW / 2;
+			}
+
+			DrawBox(
+				racketX - racketW / 2,
+				racketY - racketH / 2,
+				racketX + racketW / 2,
+				racketY + racketH / 2,
+				0x0080ff, TRUE);
+			
+
+			DrawBox(
+				topRacketX - topRacketW / 2,
+				topRacketY - topRacketH / 2,
+				topRacketX + topRacketW / 2,
+				topRacketY + topRacketH / 2,
+				0x0080ff, TRUE
+			);
+
 
 
 			//ヒットチェック
@@ -140,14 +194,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		case OVER://ゲームオーバー
 			SetFontSize(40);
-			DrawString(WIDTH / 2 - 40 / 2 * 9 / 2, HEIGHT / 3, "GAME OVER", 0xff0000);
+			DrawString(WIDTH / 2 - 40 / 2 * 9 / 2, HEIGHT / TexT_Y, "GAME OVER", 0xff0000);
 			if (timer > 60 * 5)scene = TITLE;
 			break;
 		}
 
 
+
 		SetFontSize(30);//スコアとハイスコア表示
-		DrawFormatString(10, 10, 0xffffff, "SCORE %d", score);
+		DrawFormatString(10, 10, 0xfffff, "SCORE %d", score);
 		DrawFormatString(WIDTH - 200, 10, 0xffff00, "HI-SC %d", highScore);
 
 
@@ -157,14 +212,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		ScreenFlip();//裏画面を表に反映させる
 		WaitTimer(16);//待機1秒間に16回描画する
 		if (ProcessMessage() == -1)break;//常に情報を受け取りエラーが起きたら終了
-		if (CheckHitKey(KEY_INPUT_ESCAPE) == 1)break;//ESCが押されたら終了
+		if (CheckHitKey(KEY_INPUT_ESCAPE))break;//ESCが押されたら終了
 	}
-
-
 	DxLib_End();
 	return 0;
-
-
-
 
 }
