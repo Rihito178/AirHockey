@@ -1,6 +1,7 @@
 #include"DxLib.h"
 #include<math.h>
 #include<stdlib.h>
+#include<windows.h>
 
 //ボールの跳ね返りの計算(クリア) 
 //ボールを自動で動かす(クリア)
@@ -10,11 +11,35 @@
 //画面切り替え()
 //
 
+struct CIRCLE
+{
+	int centerX; //円中心X
+	int centerY; //円中心Y
+	int radius; //半径
+	int color; //DiLibのGetColorで作った値
+	int id; //送信元クライアントID
+};
+
+
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
 	//定数の定義
 	const int WIDTH = 960, HEIGHT = 640;//ウインドウの幅・高さのピクセル数
 	const int WHITE = GetColor(255, 255, 255);//よく使用する色
+	const int Tx_GTitleFont = 50;//タイトル文字サイズ
+	const int Tx_GSystemFont = 30;//システム文字サイズ
+	const int Tx_GOverFont = 40;//ゲームオーバー文字サイズ
+
+
+	const int SenenFont = 50;//シーン変化文字サイズ
+	const int SenenChars = 12;//シーン変化文字数
+
+	const int promptFont = 30;//プロンプト文字サイズ
+	const int promptChars = 21;//プロンプト文字数
+	
+	CIRCLE myCircle = { 0, 0, 5, GetColor(0, 255, 0) }; //idは未使用(サーバ側が付与)
+	POINT cursorPos;//マウスカーソルの位置取得変数
 
 	SetWindowText("テニスゲーム");//ウインドウのタイトル
 
@@ -43,8 +68,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	int ballR = 50;//ボールのサイズ
 
 	//1Pラケットの座標管理
-	int racketX = WIDTH / 2;//ラケットの中心(X)
-	int racketY = HEIGHT - 50;//ラケットの中心(Y)
+
+	int racketX = myCircle.centerX;
+	int racketY = myCircle.centerY;//ラケットの中心(Y)
 	int racketW = 120;//ラケットの幅
 	int racketH = 12;//ラケットの高さ
 
@@ -54,21 +80,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	int topRacketW = 120;
 	int topRacketH = 12;
 
-
-	//スコアの入力式
-	//int score = 0;
-	//int highScore = 1000;
-
 	//画面切り替え
-	enum { TITLE, PLAY, OVER };
+	enum { TITLE, CONNECT,PLAY, OVER };
 	int scene = TITLE;
 	int timer = 0;
 	int score = 0;//スコア入力
 	int highScore = 1000;//ハイスコア入力
 	int dx, dy;//ヒットチェックの文
 
-	int Center = 2;//画面中央の計算
+
 	int TexT_Y = 3;//メイン文字の表示位置固定(Title等)
+
+	int P1PlayAreaX = WIDTH;//1Pのプレイエリア境界線
+	int P1PlayAreaY = HEIGHT / 2;//1Pのプレイエリア境界線
 
 
 
@@ -77,19 +101,24 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	while (1)//{}内を繰り返し行う
 	{
+	
+
+		
 		ClearDrawScreen();//描画クリア
 		timer++;
+		
+		
 
 		switch (scene) //画面の分岐
 		{
 		case TITLE://タイトル
-			SetFontSize(50);
-			DrawString(WIDTH / Center - 50 / Center * 12 / Center, HEIGHT / TexT_Y, "Tennis Game", 0x00ff00);
+			SetFontSize(Tx_GTitleFont);
+			
 			
 			if (timer % 60 < 30)
 			{
-				SetFontSize(30);
-				DrawString(WIDTH / Center - 30 / Center * 21 / Center, HEIGHT * Center / TexT_Y, "Press SPACE to start.", 0x00ffff);
+				SetFontSize(Tx_GSystemFont);
+				
 			}
 			
 			if (CheckHitKey(KEY_INPUT_SPACE))//スペースキーを押したとき開始する
@@ -104,7 +133,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				scene = PLAY;
 				PlaySoundMem(bgm, DX_PLAYTYPE_LOOP);//ループ再生
 			}
-			break;
+		break;
+
 
 		case PLAY://ゲームプレイ
 
@@ -113,8 +143,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			if (ballX < ballR && ballVx < 0)ballVx = -ballVx;//ボールのX座標＜ボールの半径になる上X座標の速さ＜０の場合
 			
 			if (ballX > WIDTH - ballR && ballVx > 0)ballVx = -ballVx;//ボールのX座標＞横幅になる上X座標の速さ＞０の場合
-
-
 
 			ballY = ballY + ballVy;//ボールの中心（Ｙ）＝ボールの中心（Ｙ）＋Ｙの速さ
 			if (ballY < ballR && ballVy < 0)ballVy = -ballVy;//ボールのY座標＜ボールの半径になる上Y座標の速さ＜０の場合
@@ -132,18 +160,34 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 
 			//ラケット
+		
 
-			if (CheckHitKey(KEY_INPUT_LEFT))//1P左キー
-			{
-				racketX = racketX - 10;
-				if (racketX < racketW / 2)racketX = racketW / 2;
-			}
+				if (GetCursorPos(&cursorPos))
+				{
 
-			if (CheckHitKey(KEY_INPUT_RIGHT))//1P右キー
-			{
-				racketX = racketX + 10;
-				if (racketX > WIDTH - racketW / 2)racketX = WIDTH - racketW / 2;
-			}
+					//マウス位置を取得して更新
+					GetMousePoint(&myCircle.centerX, &myCircle.centerY);
+					if (myCircle.centerY < P1PlayAreaY) myCircle.centerY = P1PlayAreaY;//1Pのプレイエリア制限
+
+					if (racketX < racketW / 2)racketX = racketW / 2;//ラケットの左端制限
+					//円の描画
+					DrawCircle(myCircle.centerX, myCircle.centerY, myCircle.radius, myCircle.color, TRUE);
+					
+					
+					DrawBox(
+						racketX - racketW / 2,
+						racketY - racketH / 2,
+						racketX + racketW / 2,
+						racketY + racketH / 2,
+						0x0080ff, TRUE);
+
+					racketX = myCircle.centerX;//ラケットの中心(X)
+					racketY = myCircle.centerY;//ラケットの中心(Y)
+
+
+				}
+
+				
 
 
 
@@ -161,12 +205,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				if (topRacketX > WIDTH - topRacketW / 2)topRacketX = WIDTH - topRacketW / 2;
 			}
 
-			DrawBox(
-				racketX - racketW / 2,
-				racketY - racketH / 2,
-				racketX + racketW / 2,
-				racketY + racketH / 2,
-				0x0080ff, TRUE);
+	
 			
 
 			DrawBox(
@@ -192,16 +231,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			}
 			break;
 
+
 		case OVER://ゲームオーバー
-			SetFontSize(40);
-			DrawString(WIDTH / 2 - 40 / 2 * 9 / 2, HEIGHT / TexT_Y, "GAME OVER", 0xff0000);
+			SetFontSize(Tx_GOverFont);
+			DrawString(WIDTH / 2 - (SenenFont * SenenChars) / 4, HEIGHT / TexT_Y, "GAME OVER", 0xff0000);
 			if (timer > 60 * 5)scene = TITLE;
 			break;
 		}
 
 
 
-		SetFontSize(30);//スコアとハイスコア表示
+		SetFontSize(Tx_GSystemFont);//スコアとハイスコア表示
 		DrawFormatString(10, 10, 0xfffff, "SCORE %d", score);
 		DrawFormatString(WIDTH - 200, 10, 0xffff00, "HI-SC %d", highScore);
 
