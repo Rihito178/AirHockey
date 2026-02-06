@@ -5,6 +5,7 @@
 #include<windows.h>
 #include"DxLib.h"
 #include <WS2tcpip.h>
+#include <string>
 
 #pragma comment( lib, "ws2_32.lib" )
 using namespace std;
@@ -26,13 +27,15 @@ struct CIRCLE
 	int id; //送信元クライアントID
 };
 
+
+
 const char* SERVER_IPADDRSS = "127.0.0.1";	//サーバーのIP番号
 const unsigned short SERVER_PORT = 8888;	//サーバーのポート番号
 
-static bool set_nonblocking(SOCKET s)
+static bool set_nonblocking(SOCKET s)// ソケットをノンブロッキングモードに設定
 {
 	unsigned long arg = 1;
-	return ioctlsocket(s, FIONBIO, &arg) != SOCKET_ERROR;
+	return ioctlsocket(s, FIONBIO, &arg) != SOCKET_ERROR;// 成功ならtrueを返す
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
@@ -51,7 +54,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	const int promptFont = 30;//プロンプト文字サイズ
 	const int promptChars = 21;//プロンプト文字数
 
-	CIRCLE myCircle = { 0, 0, 5, GetColor(0, 255, 0) }; //idは未使用(サーバ側が付与)
+	CIRCLE Circle = { 0, 0, 5, GetColor(0, 255, 0) };// 送信データ格納用変数
 	POINT cursorPos;//マウスカーソルの位置取得変数
 
 	// WinSock2.2 初期化処理
@@ -70,10 +73,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 	set_nonblocking(listenSock);
 
+	// サーバーのソケットアドレス構造体の作成
 	SOCKADDR_IN serverSockAddress{};
 	serverSockAddress.sin_family = AF_INET;
 	serverSockAddress.sin_port = htons(SERVER_PORT);
 	serverSockAddress.sin_addr.s_addr = htonl(INADDR_ANY);
+
+	
+	//
 	if (bind(listenSock, (SOCKADDR*)&serverSockAddress, sizeof(serverSockAddress)) == SOCKET_ERROR)
 	{
 		closesocket(listenSock);
@@ -81,6 +88,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		return 1;
 	}
 
+	// リスン状態
 	if (listen(listenSock, SOMAXCONN) == SOCKET_ERROR)
 	{
 		closesocket(listenSock);
@@ -94,12 +102,24 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	// 2クライアント用のソケットアドレス構造体を用意
 	SOCKADDR_IN clientSocketAddresses[2];
-	SOCKADDR_IN clientSockAddress{};
+	SOCKADDR_IN clientSockAddress;
 	int clientAddressLength = sizeof(clientSockAddress);
 
+	std::string recvBufs[2];
+	//ここに受信処理
+	//受信バッファ初期化
+
+	CIRCLE recvData;// 受信データ格納用変数
+
+	SOCKADDR_IN serverAddr[2];// サーバーのアドレス格納用変数
+	SOCKADDR_IN clientAddr;// クライアントのアドレス格納用変数
+	int addrLen = sizeof(clientAddr);
+
+	
+	
 
 
-	// クライアントのソケットアドレス
+
 
 
 
@@ -131,8 +151,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	//1Pラケットの座標管理
 
-	int racketX = myCircle.centerX;
-	int racketY = myCircle.centerY;//ラケットの中心(Y)
+	int racketX =Circle.centerX;
+	int racketY =Circle.centerY;//ラケットの中心(Y)
 	int racketW = 120;//ラケットの幅
 	int racketH = 12;//ラケットの高さ
 
@@ -159,8 +179,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	const int MAX_CLIENT = 2;	// クライアントの最大数
 	int clientCount = 0;	// 接続中のクライアント数の計測用
 	int startTime = 0;	// 接続完了後から開始までのカウント用
-
-
+	int ret = 0;
+	
 
 
 
@@ -180,7 +200,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		case TITLE://タイトル
 			SetFontSize(Tx_GTitleFont);
 
-
+			
 			if (timer % 60 < 30)
 			{
 				SetFontSize(Tx_GSystemFont);
@@ -226,16 +246,26 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 						// 本当のエラー
 					}
 				}
-				else
+				else// クライアント接続成功
 				{
 					socks[clientCount] = tmpSock;
+					
+					
+					
+					set_nonblocking(socks[clientCount]);
+
+					
+
 					char ipaddress[20];
-					inet_ntop(AF_INET, &clientSocketAddresses[clientCount].sin_addr, ipaddress, sizeof(ipaddress));
+					inet_ntop(AF_INET, &clientSocketAddresses[clientCount].sin_addr, ipaddress, sizeof(ipaddress));// クライアントのIPアドレスを文字列に変換
 					clientCount++;
 				}
 
+
 			}
 
+
+			// 全クライアント接続完了
 			if (clientCount >= MAX_CLIENT)
 			{
 				if (startTime == 0) startTime = GetNowCount();
@@ -272,6 +302,30 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			DrawCircle(ballX, ballY, ballR, GetColor(138, 43, 226), TRUE);//ボールの色（座標にballのX・Y・R座標を入力する）
 
 
+			//ここに受信処理
+
+			int addrLen = sizeof(clientAddr);
+			int ret = recv(socks[clientCount], (char*)&recvData, sizeof(recvData), 0);// データ受信
+
+			// 受信時
+			if (ret > 0)
+			{
+				Circle.centerX = ntohl(recvData.centerX);
+				Circle.centerY = ntohl(recvData.centerY);
+				Circle.radius = ntohl(recvData.radius);
+				Circle.color = ntohl(recvData.color);
+			}
+			// 受信エラー	未受信時はWSAEWOULDBLOCKが発生
+			else if (WSAGetLastError() != WSAEWOULDBLOCK)
+			{
+				// 受信失敗のエラー処理
+			}
+			break;
+
+
+
+
+
 
 			//ラケット
 
@@ -280,12 +334,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			{
 
 				//マウス位置を取得して更新
-				GetMousePoint(&myCircle.centerX, &myCircle.centerY);
-				if (myCircle.centerY < P1PlayAreaY) myCircle.centerY = P1PlayAreaY;//1Pのプレイエリア制限
+				GetMousePoint(&Circle.centerX, &Circle.centerY);
+				if (Circle.centerY < P1PlayAreaY)Circle.centerY = P1PlayAreaY;//1Pのプレイエリア制限
 
 				if (racketX < racketW / 2)racketX = racketW / 2;//ラケットの左端制限
 				//円の描画
-				DrawCircle(myCircle.centerX, myCircle.centerY, myCircle.radius, myCircle.color, TRUE);
+				DrawCircle(Circle.centerX,Circle.centerY,Circle.radius,Circle.color, TRUE);
 
 
 				DrawBox(
@@ -295,42 +349,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					racketY + racketH / 2,
 					0x0080ff, TRUE);
 
-				racketX = myCircle.centerX;//ラケットの中心(X)
-				racketY = myCircle.centerY;//ラケットの中心(Y)
+				racketX =Circle.centerX;//ラケットの中心(X)
+				racketY =Circle.centerY;//ラケットの中心(Y)
 
 
 			}
-
-
-
-
-
-
-
-			if (CheckHitKey(KEY_INPUT_LEFT))//2P左キー
-			{
-				topRacketX = topRacketX - 10;
-				if (topRacketX < topRacketW / 2)topRacketX = topRacketW / 2;
-			}
-
-			if (CheckHitKey(KEY_INPUT_RIGHT))//2P右キー
-			{
-				topRacketX = topRacketX + 10;
-				if (topRacketX > WIDTH - topRacketW / 2)topRacketX = WIDTH - topRacketW / 2;
-			}
-
-
-
-
-			DrawBox(
-				topRacketX - topRacketW / 2,
-				topRacketY - topRacketH / 2,
-				topRacketX + topRacketW / 2,
-				topRacketY + topRacketH / 2,
-				0x0080ff, TRUE
-			);
-
-
 
 			//ヒットチェック
 			//int dx = ballX - racketX;
@@ -346,7 +369,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			break;
 
 
+
 		case OVER://ゲームオーバー
+
 			SetFontSize(Tx_GOverFont);
 			DrawString(WIDTH / 2 - (SenenFont * SenenChars) / 4, HEIGHT / TexT_Y, "GAME OVER", 0xff0000);
 			if (timer > 60 * 5)scene = TITLE;
