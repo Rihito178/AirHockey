@@ -102,12 +102,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     // 2クライアント用のソケットアドレス構造体を用意
     SOCKADDR_IN clientSocketAddresses[2];
-    SOCKADDR_IN clientSockAddress;
-    int clientAddressLength = sizeof(clientSockAddress);
+    //SOCKADDR_IN clientSockAddress;
+    int clientAddressLength = sizeof(clientSocketAddresses);
 
     std::vector<char> recvBufs[2];
     SOCKADDR_IN serverAddr[2]; // サーバーのアドレス格納用変数
-    SOCKADDR_IN clientAddr; // クライアントのアドレス格納用変数
+    SOCKADDR_IN clientAddr[2]; // クライアントのアドレス格納用変数
     unordered_map<int, CIRCLE> others; // クライアントIDとCIRCLEのマップ（他クライアントの情報管理用）
     int addrLen = sizeof(clientAddr); // アドレス長
 
@@ -194,14 +194,22 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             break;
 
         case CONNECT:
+			if(clientCount == 0)
+			{
+                clientCount += 1;
+			}
+		
             if (clientCount < MAX_CLIENT)
             {
                 DrawString(WIDTH - 400, HEIGHT - 200, "接続待機中...", WHITE, TRUE);
             }
 
             for (int i = 0; i < MAX_CLIENT; i++)
-            {
+			{
+                // クライアントの接続を待つループ
                 int addressLength = sizeof(clientSocketAddresses[0]);
+
+                //接続要求がないとエラー
                 SOCKET tmpSock = accept(listenSock, (SOCKADDR*)&clientSocketAddresses[clientCount], &addressLength);
                 if (tmpSock == INVALID_SOCKET)
                 {
@@ -225,6 +233,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
                     char ipaddress[20];
                     inet_ntop(AF_INET, &clientSocketAddresses[clientCount].sin_addr, ipaddress, sizeof(ipaddress)); // クライアントのIPアドレスを文字列に変換
                     clientCount++;
+                    //IDを付ける
+
                 }
             }
 
@@ -327,7 +337,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
                 // ラケット
                 if (GetCursorPos(&cursorPos))
                 {
-                    // マウス位置を取得して更新
+					//ID別でif分岐を作りIDごとのマウス座標を貰う
+                    
+                    //マウス位置を取得して更新
                     GetMousePoint(&Circle.centerX, &Circle.centerY);
                     if (Circle.centerY < P1PlayAreaY) Circle.centerY = P1PlayAreaY; // 1Pのプレイエリア制限
 
