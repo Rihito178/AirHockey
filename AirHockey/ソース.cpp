@@ -127,6 +127,28 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     ChangeVolumeSoundMem(20, bgm);
     ChangeVolumeSoundMem(20, jin);
 
+
+
+    // 画面切り替え
+    enum { TITLE, CONNECT, PLAY, OVER };
+    int scene = TITLE;
+    int timer = 0;
+    int P1score = 0; // スコア入力
+	int P2score = 0; // スコア入力
+    
+	int P1highScore = 0; // ハイスコア入力
+    int P2highScore = 0; // ハイスコア入力
+    int dx, dy; // ヒットチェックの文
+
+    int TexT_Y = 3; // メイン文字の表示位置固定(Title等)
+
+    //P1は右側、P2は左側
+    int P1PlayAreaX = WIDTH / 2; // 1Pのプレイエリア境界線
+    int P1PlayAreaY = HEIGHT; // 1Pのプレイエリア境界線
+
+    //int P2PlayAreaX = WIDTH / 2; // 1Pのプレイエリア境界線
+    //int P2PlayAreaY = HEIGHT; // 1Pのプレイエリア境界線
+
     // ボールの座標管理
     int ballX = 5; // ボールの中心(X)
     int ballY = 5; // ボールの中心(Y)
@@ -134,30 +156,39 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     int ballVy = 5; // Yの速さ
     int ballR = 50; // ボールのサイズ
 
+	int RacketW = 12;// ラケットの幅
+	int RacketH = 120;// ラケットの高さ
+
+    int SubHitX = 10;
+    int SubHitY = 20;
+
+
     // 1Pラケットの座標管理
-    int racketX = Circle.centerX; // ラケットの中心(X)
-    int racketY = Circle.centerY; // ラケットの中心(Y)
-    int racketW = 120; // ラケットの幅
-    int racketH = 12; // ラケットの高さ
+    int P1RacketX = Circle.centerX; // ラケットの中心(X)
+    int P1RacketY = Circle.centerY; // ラケットの中心(Y)
 
-    // 2Pラケットの座標管理
-    int topRacketX = WIDTH / 2;
-    int topRacketY = 50; // 画面上から50px
-    int topRacketW = 120;
-    int topRacketH = 12;
+    //// 2Pラケットの座標管理
+    //int P2RacketX = Circle.centerX;
+    //int P2RacketY = Circle.centerY; // 画面上から50px
 
-    // 画面切り替え
-    enum { TITLE, CONNECT, PLAY, OVER };
-    int scene = TITLE;
-    int timer = 0;
-    int score = 0; // スコア入力
-    int highScore = 1000; // ハイスコア入力
-    int dx, dy; // ヒットチェックの文
 
-    int TexT_Y = 3; // メイン文字の表示位置固定(Title等)
+	
 
-    int P1PlayAreaX = WIDTH; // 1Pのプレイエリア境界線
-    int P1PlayAreaY = HEIGHT / 2; // 1Pのプレイエリア境界線
+    // ヒット判定の範囲管理
+    int P1HitRangeX1 = P1RacketX - RacketW / 2; //
+    int P1HitRangeY1 = P1RacketY - RacketH / 2; // 
+    int P1HitRangeX2 = P1RacketX + RacketW / 2; //
+    int P1HitRangeY2 = P1RacketY + RacketH / 2; //
+
+    //int P2HitRangeX1 = P2RacketX - RacketW / 2; // 
+    //int P2HitRangeY1 = P2RacketY - RacketH / 2; // 
+    //int P2HitRangeX2 = P2RacketX + RacketW / 2; // 
+    //int P2HitRangeY2 = P2RacketY + RacketH / 2; // 
+
+ 
+
+	
+ 
 
     const int MAX_CLIENT = 2; // クライアントの最大数
     int clientCount = 0; // 接続中のクライアント数の計測用
@@ -180,14 +211,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
             if (CheckHitKey(KEY_INPUT_SPACE)) // スペースキーを押したとき開始する
             {
-                ballX = 40;
-                ballY = 80;
-                ballVx = 5;
-                ballVy = 5;
-                racketX = WIDTH / 2;
-                racketY = HEIGHT - 50;
-                score = 0;
-
                 scene = CONNECT;
                 PlaySoundMem(bgm, DX_PLAYTYPE_LOOP); // ループ再生
             }
@@ -254,21 +277,34 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             break;
 
         case PLAY: // ゲームプレイ
+
+
             // ボールの跳ね返りの計算
             ballX = ballX + ballVx; // ボールの中心（Ｘ）＝ボールの中心（Ｘ）＋Ｘの速さ
             if (ballX < ballR && ballVx < 0) ballVx = -ballVx; // ボールのX座標＜ボールの半径になる上X座標の速さ＜０の場合
 
-            if (ballX > WIDTH - ballR && ballVx > 0) ballVx = -ballVx; // ボールのX座標＞横幅になる上X座標の速さ＞０の場合
+            //if (ballX > WIDTH - ballR && ballVx > 0) ballVx = -ballVx; // ボールのX座標＞横幅になる上X座標の速さ＞０の場合
+            if (ballY > WIDTH - ballR && ballVy > 0) ballVy = -ballVy; // ボールのY座標＞横幅になる上Y座標の速さ＞０の場合
 
             ballY = ballY + ballVy; // ボールの中心（Ｙ）＝ボールの中心（Ｙ）＋Ｙの速さ
             if (ballY < ballR && ballVy < 0) ballVy = -ballVy; // ボールのY座標＜ボールの半径になる上Y座標の速さ＜０の場合
 
-            if (ballY > HEIGHT) // ボールが下の端に到達したとき終了する
+
+
+
+
+			if (ballX < WIDTH)// ボールが左の端に到達したとき終了する
             {
-                scene = OVER;
-                timer = 0;
-                break;
+
             }
+            if (ballX > WIDTH)// ボールが右の端に到達したとき終了する
+            {
+
+            }
+            
+	
+
+
             DrawCircle(ballX, ballY, ballR, GetColor(138, 43, 226), TRUE); // ボールの色（座標にballのX・Y・R座標を入力する）
 
             char temp[4096];
@@ -302,9 +338,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
                             circle.color = ntohl(netCircle.color);
                             circle.id = ntohl(netCircle.id);
 
-                            //上側ラケットの座標に反映
-                            topRacketX = circle.centerX;
-                            topRacketY = circle.centerY;
+							// 右側ラケットの座標に反映
+							P1RacketX = circle.centerX;
+							P1RacketY = circle.centerY; 
+
+                            //左側ラケットの座標に反映
+                            //P2RacketX = circle.centerX;
+                            //P2RacketY = circle.centerY;
                         }
                     }
                     else if (ret == 0)
@@ -334,39 +374,86 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
                     }
                 }
 
-                // ラケット
+
+
+                // P1ラケット分
                 if (GetCursorPos(&cursorPos))
                 {
 					//ID別でif分岐を作りIDごとのマウス座標を貰う
                     
                     //マウス位置を取得して更新
                     GetMousePoint(&Circle.centerX, &Circle.centerY);
-                    if (Circle.centerY < P1PlayAreaY) Circle.centerY = P1PlayAreaY; // 1Pのプレイエリア制限
+                    if (Circle.centerX < P1PlayAreaX) Circle.centerX = P1PlayAreaX; // 1Pのプレイエリア制限
 
-                    if (racketX < racketW / 2) racketX = racketW / 2; // ラケットの左端制限
+                    if (P1RacketX < RacketW / 2) P1RacketX = RacketW/ 2; // ラケットの左端制限
                     // 円の描画
                     DrawCircle(Circle.centerX, Circle.centerY, Circle.radius, Circle.color, TRUE);
 
                     DrawBox(
-                        racketX - racketW / 2,
-                        racketY - racketH / 2,
-                        racketX + racketW / 2,
-                        racketY + racketH / 2,
+                        P1RacketX - RacketW / 2,
+                        P1RacketY - RacketH / 2,
+                        P1RacketX + RacketW / 2,
+                        P1RacketY + RacketH / 2,
                         0x0080ff, TRUE);
 
-                    racketX = Circle.centerX; // ラケットの中心(X)
-                    racketY = Circle.centerY; // ラケットの中心(Y)
+                    P1RacketX = Circle.centerX; // ラケットの中心(X)
+                    P1RacketY = Circle.centerY; // ラケットの中心(Y)
                 }
 
-                // ヒットチェック
-                dx = ballX - racketX;
-                dy = ballY - racketY;
-                if (-racketW / 2 - 10 < dx && dx < racketW / 2 + 10 && -20 < dy && dy < 0)
+          
+				// P2ラケット分
+                //if (GetCursorPos(&cursorPos))
+                //{
+                //    //ID別でif分岐を作りIDごとのマウス座標を貰う
+
+                //    //マウス位置を取得して更新
+                //    GetMousePoint(&Circle.centerX, &Circle.centerY);
+                //    if (Circle.centerX < P2PlayAreaY) Circle.centerX = P2PlayAreaY; // 1Pのプレイエリア制限
+
+                //    if (P2RacketX < RacketW / 2) P2RacketX = RacketW / 2; // ラケットの左端制限
+                //    // 円の描画
+                //    DrawCircle(Circle.centerX, Circle.centerY, Circle.radius, Circle.color, TRUE);
+
+                //    DrawBox(
+                //        P2RacketX - RacketW / 2,
+                //        P2RacketY - RacketH / 2,
+                //        P2RacketX + RacketW / 2,
+                //        P2RacketY + RacketH / 2,
+                //        0x0080ff, TRUE);
+
+                //    //P2RacketX = Circle.centerX; // ラケットの中心(X)
+                //    //P2RacketY = Circle.centerY; // ラケットの中心(Y)
+
+
+
+                //}
+
+                bool P1hitX = (P1HitRangeX2 - SubHitX < ballX) && (ballX < P1HitRangeX2 + SubHitX);
+				bool P1hitY = (P1HitRangeY1 - SubHitY < ballY) && (ballY < P1HitRangeY2);
+                if(P1hitX&&P1hitY)
                 {
                     ballVy = -5 - rand() % 5;
-                    score = score + 100;
-                    if (score > highScore) highScore = score;
+                    P1score = P1score + 100;
+                    if (P1score > P1highScore) P1highScore = P1score;
                 }
+
+
+
+
+
+
+
+
+
+				//if
+                // (
+				//	-RacketW / 2 - 10 < dx// ボールとラケットの中心の距離（X）がラケットの幅/2＋ボールの半径の範囲内）
+				//	&& dx < RacketW / 2 + 10 // ボールとラケットの中心の距離（X）がラケットの幅/2＋ボールの半径の範囲内）
+				//	&& -20 < dy // ボールとラケットの中心の距離（Y）が-20～0の範囲内）
+				//	&& dy < 0// ボールとラケットの中心の距離（Y）が-20～0の範囲内
+                // )
+
+        
             }
             break;
 
@@ -378,8 +465,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         }
 
         SetFontSize(Tx_GSystemFont); // スコアとハイスコア表示
-        DrawFormatString(10, 10, 0xfffff, "SCORE %d", score);
-        DrawFormatString(WIDTH - 200, 10, 0xffff00, "HI-SC %d", highScore);
+        DrawFormatString(10, 10, 0xfffff, "SCORE %d", P1score);
+        DrawFormatString(WIDTH - 200, 10, 0xffff00, "HI-SC %d", P1highScore);
 
         ScreenFlip(); // 裏画面を表に反映させる
         WaitTimer(16); // 待機1秒間に16回描画する
